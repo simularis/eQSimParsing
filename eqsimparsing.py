@@ -178,8 +178,8 @@ def post_process_pv_a(pv_a_dict, output_to_csv=True):
 
     # Separate between chillers and boilers
     boilers = df_primary['Equipment Type'].str.contains('HW')
-    df_boilers = df_primary.ix[boilers].copy()
-    df_chillers = df_primary.ix[~boilers].copy()
+    df_boilers = df_primary.loc[boilers].copy()
+    df_chillers = df_primary.loc[~boilers].copy()
     # Delete from dict
     del pv_a_dict['PRIMARY EQUIPMENT']
     
@@ -214,9 +214,8 @@ def post_process_pv_a(pv_a_dict, output_to_csv=True):
                 v.to_csv(f)
                 print('',file=f)
     else:
-        with open('PV-A.csv', 'w') as f:
+        with open('PV-A.csv', 'w', newline='') as f:
             print('PV-A Report\n\n', file=f)
-        with open('PV-A.csv', 'a') as f:
             for k, v in pv_a_dict.items():
                 print(k, file=f)
                 v.to_csv(f)
@@ -274,7 +273,7 @@ def create_sv_a_dict():
                      'Max Fan Ratio (Frac)',
                      'Min Fan Ratio (Frac)']
     index = pd.MultiIndex(levels=[['System'],['Fan Type']],
-                          labels=[[],[]],
+                          codes=[[],[]],
                           names=[u'System', u'Fan Type'])
     fan_info = pd.DataFrame(index=index, columns=fan_info_cols)
     sv_a_dict['Fans'] = fan_info
@@ -292,7 +291,7 @@ def create_sv_a_dict():
                      'Addition Rate (kBTU/hr)',
                      'Zone Mult']
     index = pd.MultiIndex(levels=[['System'],['Zone Name']],
-                          labels=[[],[]],
+                          codes=[[],[]],
                           names=[u'System', u'Zone Name'])
     zone_info = pd.DataFrame(index=index, columns=zone_info_cols)
     sv_a_dict['Zones'] = zone_info
@@ -325,7 +324,7 @@ def post_process_sv_a(sv_a_dict, output_to_csv=True):
     """
 
     # Convert to numeric
-    sv_a_dict['Systems'].ix[:,1:] = sv_a_dict['Systems'].ix[:,1:].apply(lambda x: pd.to_numeric(x))
+    sv_a_dict['Systems'].iloc[:,1:] = sv_a_dict['Systems'].iloc[:,1:].apply(lambda x: pd.to_numeric(x))
     
     not_num = ['Fan Placement', 'Fan Control']
     num_cols = [x for x in sv_a_dict['Fans'].columns if x not in not_num]
@@ -348,9 +347,8 @@ def post_process_sv_a(sv_a_dict, output_to_csv=True):
                 v.to_csv(f)
                 print('',file=f)
     else:
-        with open('SV-A.csv', 'w') as f:
+        with open('SV-A.csv', 'w', newline='') as f:
             print('SV-A Report\n\n', file=f)
-        with open('SV-A.csv', 'a') as f:
             for k, v in sv_a_dict.items():
                 print(k, file=f)
                 v.to_csv(f)
@@ -392,7 +390,7 @@ def parse_sim(coef_path=None, sim_path=None):
         df = pd.read_csv(coef_path ,index_col=0)
         
         # The numeric (should be the 3 first) are the coefs
-        coefs = df.ix[:,df.dtypes == 'float'].T
+        coefs = df.loc[:,df.dtypes == 'float'].T
         
         # Meter name is for correspondance
         meter_correspondance = pd.Series(data=df.index, index=df['MeterName'])
@@ -519,7 +517,7 @@ def parse_sim(coef_path=None, sim_path=None):
                 m2 = re.match('^(.*?)\s{2,}', line)
                 if m2:
                     equip_name = m2.group(1)
-                    pv_a_dict[current_plant_equip].ix[equip_name,:] = re.split('\s{2,}', f_list[i+1].strip())
+                    pv_a_dict[current_plant_equip].loc[equip_name,:] = re.split('\s{2,}', f_list[i+1].strip())
         
         # Parsing out SV-A
         if current_report == 'SV-A' and len(l_list) > 0:
@@ -531,19 +529,19 @@ def parse_sim(coef_path=None, sim_path=None):
             if current_sv_a_section == 'SYSTEM':
                 # If starts by an alpha
                 if re.match('^\w', line):
-                    sv_a_dict['Systems'].ix[system_name] = l_list
+                    sv_a_dict['Systems'].loc[system_name] = l_list
                         
             if current_sv_a_section == 'FAN':
                 # If Starts by two spaces and an alpha
                 if re.match('^\s{2}\w', line):
-                    sv_a_dict['Fans'].ix[(system_name, l_list[0]), :]= l_list[1:]
+                    sv_a_dict['Fans'].loc[(system_name, l_list[0]), :]= l_list[1:]
             
             if current_sv_a_section == 'ZONE':
                 if re.match('^\w', line):
                     # Split by at least two spaces (otherwise names of zones like "Apt 1 Zn" becomes three elements in list)
                     l_list = re.split('\s{2,}', line.strip())
                     try:
-                        sv_a_dict['Zones'].ix[(system_name, l_list[0]), :]= l_list[1:]             
+                        sv_a_dict['Zones'].loc[(system_name, l_list[0]), :]= l_list[1:]
                     except:
                         print(i)
                         print(line)
@@ -614,12 +612,12 @@ if __name__ == "__main__":
     # Only from command line
     if not is_ipython:
         # Add some plotting to show how it works 
-        pv_a_dict['PUMPS'].ix[:, 'W/GPM'].plot(kind='bar', figsize=(16,9), title='Pump W/GPM', color='#EB969C');
+        pv_a_dict['PUMPS'].loc[:, 'W/GPM'].plot(kind='bar', figsize=(16,9), title='Pump W/GPM', color='#EB969C');
         #sns.despine()
         plt.tight_layout()
         plt.show();
         
-        sv_a_dict['Fans'].ix[:,'W/CFM'].plot(kind='barh', figsize=(12,10), color='#EB969C', title='Fan W/CFM')
+        sv_a_dict['Fans'].loc[:,'W/CFM'].plot(kind='barh', figsize=(12,10), color='#EB969C', title='Fan W/CFM')
         plt.tight_layout()
         #sns.despine()   
         plt.show();
